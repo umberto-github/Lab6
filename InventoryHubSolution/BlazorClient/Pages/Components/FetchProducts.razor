@@ -1,0 +1,97 @@
+@page "/fetchproducts"
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p>Error: @errorMessage</p>
+}
+else if (products != null)
+{
+    <h2>Product List</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Category</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in products)
+            {
+                <tr>
+                    <td>@product.Id</td>
+                    <td>@product.Name</td>
+                    <td>$@product.Price</td>
+                    <td>@product.Stock</td>
+                    <td>@product.Category?.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No products available.</p>
+}
+
+@code {
+    private Product[]? products;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            products = await Http.GetFromJsonAsync<Product[]>("http://localhost:5186/api/productlist");
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = "Error fetching data from the server.";
+            Console.WriteLine($"HttpRequestException: {httpEx.Message}");
+        }
+        catch (TimeoutException timeoutEx)
+        {
+            errorMessage = "Request timed out.";
+            Console.WriteLine($"TimeoutException: {timeoutEx.Message}");
+        }
+        catch (JsonException jsonEx)
+        {
+            errorMessage = "Error deserializing JSON data.";
+            Console.WriteLine($"JsonException: {jsonEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred.";
+            Console.WriteLine($"Exception: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    [Inject]
+    private HttpClient Http { get; set; }
+
+    public class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public double Price { get; set; }
+        public int Stock { get; set; }
+        public Category Category { get; set; }
+    }
+
+    public class Category
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+}
